@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Productos — Admin</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #16161a;
+      --border: #2a2a30;
+      --accent: #e8ff47;
+      --accent-dim: #b8cc30;
+      --danger: #ff4757;
+      --danger-dim: #c0392b;
+      --text: #e8e8e8;
+      --text-dim: #888;
+      --radius: 6px;
+      --font-mono: 'DM Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+
+    /* ── Layout ───────────────────────────────────── */
+    .shell {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ──────────────────────────────────── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 36px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .logo span { color: var(--text-dim); font-weight: 700; }
+
+    /* ── Form ─────────────────────────────────────── */
+    .form-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    input, textarea, select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+    }
+    textarea { resize: vertical; min-height: 72px; }
+
+    .form-actions { display: flex; gap: 10px; }
+
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:hover { opacity: 0.85; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0d0d0f;
+      flex: 1;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+    }
+    .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* ── Main ─────────────────────────────────────── */
+    .main {
+      padding: 36px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .main-title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ── Toast ────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-family: var(--font-mono);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      transform: translateY(8px);
+      z-index: 999;
+      max-width: 320px;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #toast.success { background: var(--accent); color: #0d0d0f; }
+    #toast.error   { background: var(--danger); color: #fff; }
+
+    /* ── Table ────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    td {
+      padding: 14px 16px;
+      vertical-align: middle;
+      max-width: 240px;
+    }
+
+    .cell-id {
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .cell-name { font-weight: 500; }
+
+    .cell-price {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+    }
+
+    .cell-desc {
+      color: var(--text-dim);
+      font-size: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions { display: flex; gap: 8px; }
+
+    .btn-edit, .btn-del {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      padding: 6px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+      font-weight: 500;
+    }
+    .btn-edit:active, .btn-del:active { transform: scale(0.95); }
+    .btn-edit:hover, .btn-del:hover { opacity: 0.75; }
+
+    .btn-edit {
+      background: rgba(232,255,71,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(232,255,71,0.25);
+    }
+    .btn-del {
+      background: rgba(255,71,87,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(255,71,87,0.2);
+    }
+
+    /* ── Empty / Loader ───────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 64px 0;
+      color: var(--text-dim);
+    }
+    .empty-state svg { margin-bottom: 12px; opacity: 0.3; }
+    .empty-state p { font-size: 13px; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-row td { padding: 40px; text-align: center; }
+
+    /* ── Error banner ─────────────────────────────── */
+    .api-error {
+      background: rgba(255,71,87,0.08);
+      border: 1px solid rgba(255,71,87,0.3);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      color: var(--danger);
+      font-size: 13px;
+      display: none;
+    }
+    .api-error.show { display: block; }
+
+    /* ── Responsive ───────────────────────────────── */
+    @media (max-width: 768px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .main { padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Sidebar / Form ── -->
+  <aside class="sidebar">
+    <div class="logo">prod<span>/</span>admin</div>
+
+    <div>
+      <p class="form-title" id="form-title">Nuevo producto</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <input type="hidden" id="prod-id" />
+
+      <div class="field">
+        <label for="prod-nombre">Nombre</label>
+        <input id="prod-nombre" type="text" placeholder="Ej: Laptop Pro 14" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label for="prod-precio">Precio</label>
+        <input id="prod-precio" type="number" placeholder="0.00" min="0" step="0.01" />
+      </div>
+
+      <div class="field">
+        <label for="prod-stock">Stock</label>
+        <input id="prod-stock" type="number" placeholder="0" min="0" step="1" />
+      </div>
+
+      <div class="field">
+        <label for="prod-desc">Descripción</label>
+        <textarea id="prod-desc" placeholder="Descripción opcional…"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="submitForm()">Guardar</button>
+        <button class="btn btn-ghost" onclick="resetForm()" id="btn-cancel" style="display:none">Cancelar</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main / Table ── -->
+  <main class="main">
+    <div class="main-header">
+      <h1 class="main-title">Productos</h1>
+      <span class="badge"><span class="badge-dot"></span><span id="count">0</span> registros</span>
+    </div>
+
+    <div class="api-error" id="api-error"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  const API = 'http://localhost:8080/api/v1/productos';
+
+  // ── Helpers ──────────────────────────────────────────────
+
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `show ${type}`;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('api-error');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function hideError() {
+    document.getElementById('api-error').classList.remove('show');
+  }
+
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function req(url, opts = {}) {
+    const res = await fetch(url, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}${text ? ': ' + text : ''}`);
+    }
+    // 204 No Content
+    if (res.status === 204) return null;
+    return res.json().catch(() => null);
+  }
+
+  // ── Read ──────────────────────────────────────────────────
+
+  async function loadProductos() {
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = `<tr class="loader-row"><td colspan="6"><span class="spinner"></span></td></tr>`;
+    hideError();
+    try {
+      const data = await req(API);
+      renderTable(Array.isArray(data) ? data : (data?.content ?? data?.data ?? []));
+    } catch (e) {
+      tbody.innerHTML = '';
+      showError(`No se pudo conectar con la API: ${e.message}`);
+    }
+  }
+
+  function renderTable(productos) {
+    const tbody = document.getElementById('tbody');
+    document.getElementById('count').textContent = productos.length;
+
+    if (!productos.length) {
+      tbody.innerHTML = `
+        <tr><td colspan="6">
+          <div class="empty-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            <p>Sin productos. ¡Creá el primero!</p>
+          </div>
+        </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = productos.map(p => `
+      <tr data-id="${p.id}">
+        <td class="cell-id">#${esc(p.id)}</td>
+        <td class="cell-name">${esc(p.nombre ?? p.name)}</td>
+        <td class="cell-price">$${Number(p.precio ?? p.price ?? 0).toLocaleString('es-AR', {minimumFractionDigits:2})}</td>
+        <td>${esc(p.stock ?? '—')}</td>
+        <td class="cell-desc" title="${esc(p.descripcion ?? p.description ?? '')}">${esc(p.descripcion ?? p.description ?? '—')}</td>
+        <td class="actions">
+          <button class="btn-edit" onclick="startEdit(${p.id})">Editar</button>
+          <button class="btn-del"  onclick="deleteProducto(${p.id})">Borrar</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ── Create / Update ───────────────────────────────────────
+
+  async function submitForm() {
+    const id     = document.getElementById('prod-id').value;
+    const nombre = document.getElementById('prod-nombre').value.trim();
+    const precio = document.getElementById('prod-precio').value;
+    const stock  = document.getElementById('prod-stock').value;
+    const desc   = document.getElementById('prod-desc').value.trim();
+
+    if (!nombre) { toast('El nombre es obligatorio.', 'error'); return; }
+    if (precio === '' || isNaN(Number(precio))) { toast('Ingresá un precio válido.', 'error'); return; }
+
+    const body = {
+      nombre,
+      precio: parseFloat(precio),
+      stock:  stock !== '' ? parseInt(stock, 10) : 0,
+      descripcion: desc,
+    };
+
+    try {
+      if (id) {
+        await req(`${API}/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+        toast('Producto actualizado ✓');
+      } else {
+        await req(API, { method: 'POST', body: JSON.stringify(body) });
+        toast('Producto creado ✓');
+      }
+      resetForm();
+      loadProductos();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  // ── Delete ────────────────────────────────────────────────
+
+  async function deleteProducto(id) {
+    if (!confirm(`¿Eliminar el producto #${id}?`)) return;
+    try {
+      await req(`${API}/${id}`, { method: 'DELETE' });
+      toast('Producto eliminado.');
+      loadProductos();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  // ── Edit ──────────────────────────────────────────────────
+
+  async function startEdit(id) {
+    try {
+      const p = await req(`${API}/${id}`);
+      document.getElementById('prod-id').value     = p.id;
+      document.getElementById('prod-nombre').value = p.nombre ?? p.name ?? '';
+      document.getElementById('prod-precio').value = p.precio ?? p.price ?? '';
+      document.getElementById('prod-stock').value  = p.stock ?? '';
+      document.getElementById('prod-desc').value   = p.descripcion ?? p.description ?? '';
+      document.getElementById('form-title').textContent = `Editando #${p.id}`;
+      document.getElementById('btn-cancel').style.display = '';
+      document.querySelector('.sidebar').scrollIntoView({ behavior: 'smooth' });
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  // ── Reset form ────────────────────────────────────────────
+
+  function resetForm() {
+    ['prod-id','prod-nombre','prod-precio','prod-stock','prod-desc']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('form-title').textContent = 'Nuevo producto';
+    document.getElementById('btn-cancel').style.display = 'none';
+  }
+
+  // ── Init ──────────────────────────────────────────────────
+  loadProductos();
+</script>
+</body>
+</html>
